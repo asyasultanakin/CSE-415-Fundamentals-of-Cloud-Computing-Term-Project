@@ -1,0 +1,29 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
+*.tfvars.json
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Environment and secrets
+.env
+.env.*
+local.settings.json
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Lambda build output
+lambda/*.zip
+
+# OS
+.DS_Store
+Thumbs.db
