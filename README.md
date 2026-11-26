@@ -7,7 +7,7 @@ A photo gallery application deployed across Azure and AWS, built for CSE 415 Fun
 | Component | Cloud | Service |
 |---|---|---|
 | Web interface | Azure | Static Web Apps (Free) |
-| Backend API | Azure | Azure Functions (Flex Consumption) |
+| Backend API | Azure | Azure Container Apps (consumption, free tier) |
 | Authentication | Azure | Entra ID |
 | Secrets | Azure | Key Vault (Standard) |
 | Object storage | AWS | S3 (private bucket) |
@@ -30,7 +30,8 @@ The following steps were done by hand and are not managed by Terraform. Each ent
 | GitHub repository variables (`AWS_ROLE_ARN`, `AWS_REGION`, `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `AZURE_REGION`) | Public identifiers consumed by the pipeline |
 | Entra SPA app registration `pgal-spa` (client ID `7e709590-8b26-4044-b0e2-f93fc367ceb9`): redirect URI `http://localhost:5173`, Application ID URI `api://7e709590-…`, scope `access_as_user`, token version 2 | Avoids giving the pipeline Microsoft Graph write permissions |
 | GitHub repository variable `ENTRA_CLIENT_ID` | Public identifier for the SPA app, consumed by the pipeline to build `config.json` |
-| After first deploy: add the Static Web App URL as a redirect URI in the `pgal-spa` app registration | URL is not known until Terraform runs |
+| After first deploy: add the Static Web App URL (`https://happy-smoke-080ef890f3.azurestaticapps.net`) as a redirect URI in the `pgal-spa` app registration | URL is not known until Terraform runs |
+| Register `Microsoft.App` resource provider on the Azure subscription (Portal → Subscriptions → Resource providers) | Required for Container Apps; not registerable via Terraform before first use |
 
 ## Deploy from scratch
 
@@ -53,7 +54,7 @@ Do not destroy the state backends or OIDC roles — those are intentionally perm
 | Item | Expected |
 |---|---|
 | Static Web Apps Free | $0 |
-| Functions Flex Consumption | $0 (within free grant) |
+| Container Apps (consumption) | $0 (within free monthly grant) |
 | Storage accounts | < $0.50/month |
 | Key Vault Standard | cents |
 | S3, Lambda, CloudWatch | ~$0 at this scale |
