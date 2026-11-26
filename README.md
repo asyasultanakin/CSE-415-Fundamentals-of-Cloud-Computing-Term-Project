@@ -28,6 +28,9 @@ The following steps were done by hand and are not managed by Terraform. Each ent
 | AWS IAM OIDC provider for `token.actions.githubusercontent.com` and role `pgal-github-actions` | The pipeline needs this trust to run; it cannot create its own credentials |
 | Azure app registration `pgal-github-actions` with federated credentials, Contributor + User Access Administrator on subscription, Storage Blob Data Contributor on state container | Same reason — pipeline needs this trust before it can run; avoids giving Terraform directory write permissions |
 | GitHub repository variables (`AWS_ROLE_ARN`, `AWS_REGION`, `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `AZURE_REGION`) | Public identifiers consumed by the pipeline |
+| Entra SPA app registration `pgal-spa` (client ID `7e709590-8b26-4044-b0e2-f93fc367ceb9`): redirect URI `http://localhost:5173`, Application ID URI `api://7e709590-…`, scope `access_as_user`, token version 2 | Avoids giving the pipeline Microsoft Graph write permissions |
+| GitHub repository variable `ENTRA_CLIENT_ID` | Public identifier for the SPA app, consumed by the pipeline to build `config.json` |
+| After first deploy: add the Static Web App URL as a redirect URI in the `pgal-spa` app registration | URL is not known until Terraform runs |
 
 ## Deploy from scratch
 
