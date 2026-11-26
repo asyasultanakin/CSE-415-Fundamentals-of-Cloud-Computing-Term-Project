@@ -84,7 +84,7 @@ resource "azurerm_storage_account" "functions" {
 # ── Flex Consumption Function App ─────────────────────────────────────────────
 
 resource "azurerm_service_plan" "functions" {
-  name                = "pgal-fn-plan"
+  name                = "pgal-fn-plan-y1"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   os_type             = "Linux"
