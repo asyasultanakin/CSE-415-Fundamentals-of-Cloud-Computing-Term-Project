@@ -151,7 +151,7 @@ resource "azurerm_role_assignment" "api_kv_reader" {
 
 resource "azurerm_key_vault_secret" "aws_key_id" {
   name         = "aws-access-key-id"
-  value        = data.terraform_remote_state.aws.outputs.api_access_key_id
+  value        = try(data.terraform_remote_state.aws.outputs.api_access_key_id, "placeholder")
   key_vault_id = azurerm_key_vault.main.id
 
   depends_on = [azurerm_role_assignment.pipeline_kv_officer]
@@ -159,7 +159,7 @@ resource "azurerm_key_vault_secret" "aws_key_id" {
 
 resource "azurerm_key_vault_secret" "aws_secret_key" {
   name         = "aws-secret-access-key"
-  value        = data.terraform_remote_state.aws.outputs.api_secret_access_key
+  value        = try(data.terraform_remote_state.aws.outputs.api_secret_access_key, "placeholder")
   key_vault_id = azurerm_key_vault.main.id
 
   depends_on = [azurerm_role_assignment.pipeline_kv_officer]
