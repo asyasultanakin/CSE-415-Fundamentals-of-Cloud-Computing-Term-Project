@@ -8,7 +8,7 @@ const JWKS = createRemoteJWKSet(
 );
 
 export async function validateToken(req) {
-  const auth = req.headers.get("authorization") ?? "";
+  const auth = req.headers["authorization"] ?? "";
   if (!auth.startsWith("Bearer ")) return null;
   const token = auth.slice(7);
 

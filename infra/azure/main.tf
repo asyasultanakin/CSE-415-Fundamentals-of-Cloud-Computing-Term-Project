@@ -74,33 +74,21 @@ resource "azurerm_static_web_app" "frontend" {
   sku_size            = "Free"
 }
 
-# ── Storage account for Function App ─────────────────────────────────────────
+# ── App Service (Free F1) for the API ────────────────────────────────────────
 
-resource "azurerm_storage_account" "functions" {
-  name                     = "pgalfnstore${substr(md5(azurerm_resource_group.main.id), 0, 6)}"
-  resource_group_name      = azurerm_resource_group.main.name
-  location                 = azurerm_resource_group.main.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-}
-
-# ── Flex Consumption Function App ─────────────────────────────────────────────
-
-resource "azurerm_service_plan" "functions" {
-  name                = "pgal-fn-plan-y1"
+resource "azurerm_service_plan" "api" {
+  name                = "pgal-api-plan"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   os_type             = "Linux"
-  sku_name            = "Y1"
+  sku_name            = "F1"
 }
 
-resource "azurerm_linux_function_app" "api" {
-  name                       = "pgal-api"
-  resource_group_name        = azurerm_resource_group.main.name
-  location                   = azurerm_resource_group.main.location
-  storage_account_name       = azurerm_storage_account.functions.name
-  storage_account_access_key = azurerm_storage_account.functions.primary_access_key
-  service_plan_id            = azurerm_service_plan.functions.id
+resource "azurerm_linux_web_app" "api" {
+  name                = "pgal-api"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+  service_plan_id     = azurerm_service_plan.api.id
 
   identity {
     type = "SystemAssigned"
@@ -108,21 +96,21 @@ resource "azurerm_linux_function_app" "api" {
 
   site_config {
     application_stack {
-      node_version = "20"
+      node_version = "20-lts"
     }
+    always_on = false
   }
 
   app_settings = {
-    ENTRA_TENANT_ID = var.entra_tenant_id
-    ENTRA_CLIENT_ID = var.entra_client_id
-    AWS_REGION      = "eu-north-1"
-    BUCKET_NAME     = try(data.terraform_remote_state.aws.outputs.photos_bucket_name, "placeholder")
-    TABLE_NAME      = try(data.terraform_remote_state.aws.outputs.photos_table_name, "placeholder")
-
-    AWS_ACCESS_KEY_ID     = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.aws_key_id.versionless_id})"
-    AWS_SECRET_ACCESS_KEY = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.aws_secret_key.versionless_id})"
-
-    WEBSITE_CORS_ALLOWED_ORIGINS = azurerm_static_web_app.frontend.default_host_name
+    ENTRA_TENANT_ID                = var.entra_tenant_id
+    ENTRA_CLIENT_ID                = var.entra_client_id
+    AWS_REGION                     = "eu-north-1"
+    BUCKET_NAME                    = try(data.terraform_remote_state.aws.outputs.photos_bucket_name, "placeholder")
+    TABLE_NAME                     = try(data.terraform_remote_state.aws.outputs.photos_table_name, "placeholder")
+    AWS_ACCESS_KEY_ID              = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.aws_key_id.versionless_id})"
+    AWS_SECRET_ACCESS_KEY          = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.aws_secret_key.versionless_id})"
+    WEBSITE_CORS_ALLOWED_ORIGINS   = "https://${azurerm_static_web_app.frontend.default_host_name}"
+    SCM_DO_BUILD_DURING_DEPLOYMENT = "true"
   }
 }
 
@@ -145,11 +133,11 @@ resource "azurerm_role_assignment" "pipeline_kv_officer" {
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
-# Function App identity can read secrets
+# API identity can read secrets
 resource "azurerm_role_assignment" "api_kv_reader" {
   scope                = azurerm_key_vault.main.id
   role_definition_name = "Key Vault Secrets User"
-  principal_id         = azurerm_linux_function_app.api.identity[0].principal_id
+  principal_id         = azurerm_linux_web_app.api.identity[0].principal_id
 }
 
 resource "azurerm_key_vault_secret" "aws_key_id" {
@@ -174,6 +162,10 @@ output "static_web_app_url" {
   value = "https://${azurerm_static_web_app.frontend.default_host_name}"
 }
 
-output "function_app_url" {
-  value = "https://${azurerm_linux_function_app.api.default_hostname}"
+output "api_url" {
+  value = "https://${azurerm_linux_web_app.api.default_hostname}"
+}
+
+output "api_app_name" {
+  value = azurerm_linux_web_app.api.name
 }
