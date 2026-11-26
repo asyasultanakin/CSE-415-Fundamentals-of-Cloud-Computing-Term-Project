@@ -43,6 +43,11 @@ variable "entra_tenant_id" {
   default = "8b5d7600-e426-4843-b8d8-852678ba6e51"
 }
 
+variable "image_tag" {
+  type    = string
+  default = "latest"
+}
+
 data "azurerm_client_config" "current" {}
 
 # ── Remote state: read AWS outputs ────────────────────────────────────────────
@@ -74,43 +79,85 @@ resource "azurerm_static_web_app" "frontend" {
   sku_size            = "Free"
 }
 
-# ── App Service (Free F1) for the API ────────────────────────────────────────
+# ── Container Apps environment ────────────────────────────────────────────────
 
-resource "azurerm_service_plan" "api" {
-  name                = "pgal-api-plan"
+resource "azurerm_container_app_environment" "main" {
+  name                = "pgal-env"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
-  os_type             = "Linux"
-  sku_name            = "F1"
 }
 
-resource "azurerm_linux_web_app" "api" {
-  name                = "pgal-api"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
-  service_plan_id     = azurerm_service_plan.api.id
+# ── Container App for the API ─────────────────────────────────────────────────
+
+resource "azurerm_container_app" "api" {
+  name                         = "pgal-api"
+  resource_group_name          = azurerm_resource_group.main.name
+  container_app_environment_id = azurerm_container_app_environment.main.id
+  revision_mode                = "Single"
 
   identity {
     type = "SystemAssigned"
   }
 
-  site_config {
-    application_stack {
-      node_version = "20-lts"
+  template {
+    min_replicas = 0
+    max_replicas = 1
+
+    container {
+      name   = "api"
+      image  = "ghcr.io/asyasultanakin/cse-415-fundamentals-of-cloud-computing-term-project/pgal-api:${var.image_tag}"
+      cpu    = 0.25
+      memory = "0.5Gi"
+
+      env {
+        name  = "ENTRA_TENANT_ID"
+        value = var.entra_tenant_id
+      }
+      env {
+        name  = "ENTRA_CLIENT_ID"
+        value = var.entra_client_id
+      }
+      env {
+        name  = "AWS_REGION"
+        value = "eu-north-1"
+      }
+      env {
+        name  = "BUCKET_NAME"
+        value = try(data.terraform_remote_state.aws.outputs.photos_bucket_name, "placeholder")
+      }
+      env {
+        name  = "TABLE_NAME"
+        value = try(data.terraform_remote_state.aws.outputs.photos_table_name, "placeholder")
+      }
+      env {
+        name        = "AWS_ACCESS_KEY_ID"
+        secret_name = "aws-key-id"
+      }
+      env {
+        name        = "AWS_SECRET_ACCESS_KEY"
+        secret_name = "aws-secret-key"
+      }
     }
-    always_on = false
   }
 
-  app_settings = {
-    ENTRA_TENANT_ID                = var.entra_tenant_id
-    ENTRA_CLIENT_ID                = var.entra_client_id
-    AWS_REGION                     = "eu-north-1"
-    BUCKET_NAME                    = try(data.terraform_remote_state.aws.outputs.photos_bucket_name, "placeholder")
-    TABLE_NAME                     = try(data.terraform_remote_state.aws.outputs.photos_table_name, "placeholder")
-    AWS_ACCESS_KEY_ID              = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.aws_key_id.versionless_id})"
-    AWS_SECRET_ACCESS_KEY          = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.aws_secret_key.versionless_id})"
-    WEBSITE_CORS_ALLOWED_ORIGINS   = "https://${azurerm_static_web_app.frontend.default_host_name}"
-    SCM_DO_BUILD_DURING_DEPLOYMENT = "true"
+  secret {
+    name  = "aws-key-id"
+    value = try(data.terraform_remote_state.aws.outputs.api_access_key_id, "placeholder")
+  }
+
+  secret {
+    name  = "aws-secret-key"
+    value = try(data.terraform_remote_state.aws.outputs.api_secret_access_key, "placeholder")
+  }
+
+  ingress {
+    external_enabled = true
+    target_port      = 8080
+
+    traffic_weight {
+      latest_revision = true
+      percentage      = 100
+    }
   }
 }
 
@@ -126,7 +173,7 @@ resource "azurerm_key_vault" "main" {
   purge_protection_enabled   = false
 }
 
-# Pipeline identity can manage secrets (needed to write them on first deploy)
+# Pipeline identity can manage secrets
 resource "azurerm_role_assignment" "pipeline_kv_officer" {
   scope                = azurerm_key_vault.main.id
   role_definition_name = "Key Vault Secrets Officer"
@@ -137,7 +184,7 @@ resource "azurerm_role_assignment" "pipeline_kv_officer" {
 resource "azurerm_role_assignment" "api_kv_reader" {
   scope                = azurerm_key_vault.main.id
   role_definition_name = "Key Vault Secrets User"
-  principal_id         = azurerm_linux_web_app.api.identity[0].principal_id
+  principal_id         = azurerm_container_app.api.identity[0].principal_id
 }
 
 resource "azurerm_key_vault_secret" "aws_key_id" {
@@ -163,9 +210,5 @@ output "static_web_app_url" {
 }
 
 output "api_url" {
-  value = "https://${azurerm_linux_web_app.api.default_hostname}"
-}
-
-output "api_app_name" {
-  value = azurerm_linux_web_app.api.name
+  value = "https://${azurerm_container_app.api.ingress[0].fqdn}"
 }
