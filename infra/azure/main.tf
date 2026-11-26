@@ -27,7 +27,7 @@ provider "azurerm" {
 
 variable "azure_region" {
   type    = string
-  default = "northeurope"
+  default = "eastus2"
 }
 
 variable "entra_client_id" {
