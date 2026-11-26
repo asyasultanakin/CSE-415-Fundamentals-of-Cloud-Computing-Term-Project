@@ -113,8 +113,8 @@ resource "azurerm_linux_function_app" "api" {
     ENTRA_TENANT_ID = var.entra_tenant_id
     ENTRA_CLIENT_ID = var.entra_client_id
     AWS_REGION      = "eu-north-1"
-    BUCKET_NAME     = data.terraform_remote_state.aws.outputs.photos_bucket_name
-    TABLE_NAME      = data.terraform_remote_state.aws.outputs.photos_table_name
+    BUCKET_NAME     = try(data.terraform_remote_state.aws.outputs.photos_bucket_name, "placeholder")
+    TABLE_NAME      = try(data.terraform_remote_state.aws.outputs.photos_table_name, "placeholder")
 
     AWS_ACCESS_KEY_ID     = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.aws_key_id.versionless_id})"
     AWS_SECRET_ACCESS_KEY = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.aws_secret_key.versionless_id})"
