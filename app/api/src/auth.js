@@ -15,7 +15,7 @@ export async function validateToken(req) {
   try {
     const { payload } = await jwtVerify(token, JWKS, {
       issuer: `https://login.microsoftonline.com/${TENANT_ID}/v2.0`,
-      audience: `api://${CLIENT_ID}`,
+      audience: CLIENT_ID,
     });
 
     const scopes = (payload.scp ?? "").split(" ");
