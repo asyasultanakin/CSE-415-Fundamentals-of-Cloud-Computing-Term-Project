@@ -133,7 +133,7 @@ jobs:
       - name: Build frontend
         working-directory: app/frontend
         run: |
-          npm ci
+          npm install
           npm run build
 
       - name: Deploy to Static Web Apps
