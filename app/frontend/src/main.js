@@ -140,7 +140,7 @@ async function updateUI() {
   if (!account) {
     signinBtn.style.display = "";
     signoutBtn.style.display = "none";
-    uploadSection.style.display = "none";
+    uploadSection.style.display = "";
     statusEl.textContent = "Not signed in.";
     gallery.innerHTML = "";
     return;
@@ -148,7 +148,7 @@ async function updateUI() {
 
   signinBtn.style.display = "none";
   signoutBtn.style.display = "";
-  uploadSection.style.display = "";
+  uploadSection.style.display = "block";
   statusEl.textContent = `Signed in as ${account.name}`;
 
   loadGallery();
