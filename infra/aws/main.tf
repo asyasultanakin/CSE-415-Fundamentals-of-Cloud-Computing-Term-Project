@@ -173,8 +173,9 @@ resource "aws_iam_role_policy" "lambda" {
 
 data "archive_file" "lambda" {
   type        = "zip"
-  source_file = "${path.module}/../../lambda/handler.js"
+  source_dir  = "${path.module}/../../lambda"
   output_path = "${path.module}/../../lambda/handler.zip"
+  excludes    = ["handler.zip"]
 }
 
 resource "aws_lambda_function" "photo_processor" {
