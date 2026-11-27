@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.0"
+    }
   }
 
   backend "s3" {
@@ -27,9 +31,9 @@ variable "aws_region" {
 }
 
 variable "frontend_origin" {
-  type    = string
-  default = "*"
+  type        = string
   description = "Allowed origin for S3 CORS — set to the Static Web App URL in production"
+  default     = "*"
 }
 
 data "aws_caller_identity" "current" {}
@@ -125,8 +129,6 @@ resource "aws_iam_user_policy" "api" {
 resource "aws_iam_access_key" "api" {
   user = aws_iam_user.api.name
 }
-
-# ── Outputs ────────────────────────────────────────────────────────────────────
 
 # ── Lambda ────────────────────────────────────────────────────────────────────
 
