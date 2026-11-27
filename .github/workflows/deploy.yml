@@ -57,7 +57,7 @@ jobs:
           terraform_version: "1.10.0"
 
       - run: terraform init
-      - run: terraform apply -auto-approve
+      - run: terraform apply -auto-approve -var="frontend_origin=${{ vars.FRONTEND_ORIGIN }}"
 
   deploy-azure:
     runs-on: ubuntu-latest
@@ -127,7 +127,8 @@ jobs:
           {
             "clientId": "${{ vars.ENTRA_CLIENT_ID }}",
             "tenantId": "${{ vars.AZURE_TENANT_ID }}",
-            "apiUrl": "${{ needs.deploy-azure.outputs.api_url }}"
+            "apiUrl": "${{ needs.deploy-azure.outputs.api_url }}",
+            "ga4Id": "${{ vars.GA4_MEASUREMENT_ID }}"
           }
           EOF
 

@@ -1,5 +1,6 @@
 {
   "clientId": "7e709590-8b26-4044-b0e2-f93fc367ceb9",
   "tenantId": "8b5d7600-e426-4843-b8d8-852678ba6e51",
-  "apiUrl": "http://localhost:7071"
+  "apiUrl": "http://localhost:8080",
+  "ga4Id": ""
 }

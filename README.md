@@ -32,6 +32,8 @@ The following steps were done by hand and are not managed by Terraform. Each ent
 | GitHub repository variable `ENTRA_CLIENT_ID` | Public identifier for the SPA app, consumed by the pipeline to build `config.json` |
 | After first deploy: add the Static Web App URL (`https://happy-smoke-080ef890f3.azurestaticapps.net`) as a redirect URI in the `pgal-spa` app registration | URL is not known until Terraform runs |
 | Register `Microsoft.App` resource provider on the Azure subscription (Portal → Subscriptions → Resource providers) | Required for Container Apps; not registerable via Terraform before first use |
+| GA4 property `pgal-photo-gallery`, web data stream for `https://happy-smoke-080ef890f3.azurestaticapps.net`, measurement ID `G-1P3E9FL9V3` | Google Analytics has no Terraform provider in this stack |
+| GitHub repository variables `GA4_MEASUREMENT_ID` and `FRONTEND_ORIGIN` | Public identifiers injected into the frontend build by the pipeline |
 
 ## Deploy from scratch
 
