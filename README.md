@@ -2,6 +2,10 @@
 
 A photo gallery application deployed across Azure and AWS, built for CSE 415 Fundamentals of Cloud Computing.
 
+## Demo video
+
+[Watch on Youtube (unlisted)](https://youtu.be/h9v6S8vdBAY)
+
 ## Architecture
 
 ```mermaid
