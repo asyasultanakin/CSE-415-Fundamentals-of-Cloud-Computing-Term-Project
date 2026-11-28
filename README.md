@@ -4,18 +4,63 @@ A photo gallery application deployed across Azure and AWS, built for CSE 415 Fun
 
 ## Architecture
 
-| Component | Cloud | Service |
-|---|---|---|
-| Web interface | Azure | Static Web Apps (Free) |
-| Backend API | Azure | Azure Container Apps (consumption, free tier) |
-| Authentication | Azure | Entra ID |
-| Secrets | Azure | Key Vault (Standard) |
-| Object storage | AWS | S3 (private bucket) |
-| Event function | AWS | Lambda (S3 ObjectCreated trigger) |
-| Database | AWS | DynamoDB (on-demand) |
-| Analytics | Frontend | Google Analytics 4 |
-| IaC | GitHub | Terraform |
-| CI/CD | GitHub | GitHub Actions (OIDC) |
+```mermaid
+flowchart TD
+    User["Browser"]
+
+    subgraph Azure
+        SWA["Static Web Apps\n(frontend)"]
+        Entra["Entra ID\n(authentication)"]
+        API["Container Apps\n(Express API)"]
+        KV["Key Vault\n(AWS credentials)"]
+    end
+
+    subgraph AWS
+        S3["S3\n(private photo bucket)"]
+        Lambda["Lambda\n(photo processor)"]
+        DDB["DynamoDB\n(photo metadata)"]
+    end
+
+    GA4["Google Analytics 4"]
+
+    User -->|"1. sign in"| Entra
+    Entra -->|"access token (JWT)"| User
+    User -->|"2. GET/POST with Bearer token"| API
+    API -->|"validate token"| Entra
+    API -->|"3. write PENDING item"| DDB
+    API -->|"4. pre-signed PUT URL"| User
+    User -->|"5. PUT file directly"| S3
+    User -->|"upload_photo event"| GA4
+    S3 -->|"6. ObjectCreated trigger"| Lambda
+    Lambda -->|"7. update → PROCESSED"| DDB
+    API -->|"reads AWS credentials"| KV
+    API -->|"query photos + pre-signed GET URLs"| DDB
+    API -->|"pre-signed GET URLs"| S3
+```
+
+| Component | Cloud | Service | Why |
+|---|---|---|---|
+| Web interface | Azure | Static Web Apps (Free) | Free HTTPS hosting, no server needed |
+| Backend API | Azure | Container Apps (consumption) | Scales to zero; no App Service quota on this subscription |
+| Authentication | Azure | Entra ID | Required; backend validates JWT on every request |
+| Secrets | Azure | Key Vault (Standard, RBAC) | Stores the AWS access key; never in code or env files |
+| Object storage | AWS | S3 (private bucket) | Required private bucket; browser uploads via pre-signed URL |
+| Event function | AWS | Lambda (S3 ObjectCreated) | Required event trigger; flips photo status to PROCESSED |
+| Database | AWS | DynamoDB (on-demand) | Serverless, always-free tier at this scale |
+| Analytics | Frontend | Google Analytics 4 | Required; custom event `upload_photo` |
+| IaC | GitHub | Terraform (remote state) | Required; one stack per cloud |
+| CI/CD | GitHub | GitHub Actions (OIDC) | Required; no stored cloud credentials |
+
+## How the two clouds talk
+
+1. The browser signs in with Entra ID (MSAL) and gets a short-lived JWT access token.
+2. Every API call sends the token as `Authorization: Bearer …`; the API validates it with `jose` (signature, issuer, audience, expiry).
+3. `POST /api/photos/upload-url` — API writes a `PENDING` item to DynamoDB and returns a pre-signed S3 PUT URL (5-minute expiry).
+4. The browser uploads the file **directly to S3** — the file never passes through the API.
+5. S3 fires an `ObjectCreated` event → Lambda updates the DynamoDB item to `PROCESSED` with file size and timestamp.
+6. `GET /api/photos` — API queries DynamoDB for the user's items and attaches pre-signed S3 GET URLs.
+
+The API authenticates to AWS using an IAM access key stored in Key Vault and injected as Container App secrets at startup.
 
 ## Manual steps
 
@@ -50,6 +95,16 @@ cd infra/aws && terraform destroy
 cd infra/azure && terraform destroy
 ```
 Do not destroy the state backends or OIDC roles — those are intentionally permanent.
+
+## Actual costs (November 2026)
+
+**AWS** — S3: $0.00 · Lambda: $0.00 · DynamoDB: $0.00 · Total project services: **$0.00**
+
+![AWS cost screenshot](docs/aws-cost.png)
+
+**Azure** — Key Vault: <$0.01 · Storage: <$0.01 · Bandwidth: $0.00 · Total: **<$0.01**
+
+![Azure cost screenshot](docs/azure-cost.png)
 
 ## Cost estimate
 
